@@ -1,6 +1,7 @@
 import json
 import html
 import os
+import textwrap
 from typing import Any, Dict, List
 
 import streamlit as st
@@ -16,6 +17,17 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+
+# Streamlit treats heavily-indented HTML passed to render_markdown() as a
+# code block. Dedent HTML before rendering so the premium UI displays
+# as intended instead of showing raw <div> tags.
+_st_markdown = st.markdown
+
+def render_markdown(content, **kwargs):
+    if isinstance(content, str):
+        content = textwrap.dedent(content)
+    return _st_markdown(content, **kwargs)
 
 
 # ============================================================
@@ -338,7 +350,7 @@ label, [data-testid="stWidgetLabel"] p {
 </style>
 """
 
-st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+render_markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 # ============================================================
@@ -820,7 +832,7 @@ if "analyzed_message" not in st.session_state:
 # ============================================================
 # HERO
 # ============================================================
-st.markdown(
+render_markdown(
     """
     <div class="hero">
 
@@ -856,7 +868,7 @@ st.markdown(
 # ============================================================
 # WORKFLOW
 # ============================================================
-st.markdown(
+render_markdown(
     """
     <div class="workflow">
 
@@ -885,7 +897,7 @@ st.markdown(
 # ============================================================
 # MESSAGE CARD
 # ============================================================
-st.markdown(
+render_markdown(
     """
     <div class="saas-card">
         <div class="section-title">Your Message</div>
@@ -911,7 +923,7 @@ message = st.text_area(
     label_visibility="collapsed",
 )
 
-st.markdown(
+render_markdown(
     f'<div style="color:#737f98;font-size:13px;margin:-10px 0 22px;">'
     f'<b style="color:#a5b4fc;">{len(message or "")}</b> characters'
     f'</div>',
@@ -922,7 +934,7 @@ st.markdown(
 # ============================================================
 # CONTEXT CARD
 # ============================================================
-st.markdown(
+render_markdown(
     """
     <div class="saas-card">
         <div class="section-title">
@@ -971,7 +983,7 @@ analyze = st.button(
     use_container_width=True,
 )
 
-st.markdown(
+render_markdown(
     """
     <div style="
         text-align:center;
@@ -1045,17 +1057,17 @@ if analyze:
 if st.session_state.result:
     result = st.session_state.result
 
-    st.markdown(
+    render_markdown(
         '<div class="section-title" style="margin-top:35px;">Your Human-Touch Report</div>',
         unsafe_allow_html=True,
     )
 
-    st.markdown(
+    render_markdown(
         '<div class="saas-card">',
         unsafe_allow_html=True,
     )
 
-    st.markdown(
+    render_markdown(
         build_results(
             result,
             st.session_state.analyzed_message,
@@ -1063,13 +1075,13 @@ if st.session_state.result:
         unsafe_allow_html=True,
     )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    render_markdown("</div>", unsafe_allow_html=True)
 
 
 # ============================================================
 # FOOTER
 # ============================================================
-st.markdown(
+render_markdown(
     """
     <div style="
         text-align:center;
