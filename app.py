@@ -7,360 +7,6 @@ from typing import Any, Dict, List
 import streamlit as st
 from groq import Groq
 
-
-# ============================================================
-# PAGE CONFIG
-# ============================================================
-st.set_page_config(
-    page_title="Human Touch Quality Layer",
-    page_icon="✦",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
-
-# Streamlit treats heavily-indented HTML passed to render_markdown() as a
-# code block. Dedent HTML before rendering so the premium UI displays
-# as intended instead of showing raw <div> tags.
-def render_markdown(content, **kwargs):
-    """Render the app's HTML directly so Streamlit never shows raw HTML tags."""
-    if isinstance(content, str):
-        content = textwrap.dedent(content)
-    kwargs.pop("unsafe_allow_html", None)
-    return st.html(content)
-
-
-# ============================================================
-# PREMIUM DARK UI
-# ============================================================
-CUSTOM_CSS = """
-<style>
-:root {
-    --bg: #070b18;
-    --card: rgba(15,23,42,.72);
-    --card-strong: rgba(15,23,42,.88);
-    --border: rgba(148,163,184,.12);
-    --text: #f5f7ff;
-    --muted: #9ca3b8;
-    --indigo: #6366f1;
-    --violet: #8b5cf6;
-    --cyan: #22d3ee;
-}
-
-html, body, [data-testid="stAppViewContainer"] {
-    background:
-        radial-gradient(circle at 15% 0%, rgba(99,102,241,.16), transparent 32%),
-        radial-gradient(circle at 90% 10%, rgba(139,92,246,.12), transparent 30%),
-        #070b18 !important;
-    color: var(--text) !important;
-}
-
-[data-testid="stHeader"] {
-    background: transparent !important;
-}
-
-.block-container {
-    max-width: 1180px !important;
-    margin: auto !important;
-    padding: 35px 24px 70px !important;
-}
-
-/* HERO */
-.hero {
-    text-align: center;
-    padding: 55px 20px 35px;
-}
-
-.hero-title {
-    font-size: 58px;
-    font-weight: 800;
-    letter-spacing: -2px;
-    margin: 0;
-    color: #f8fafc;
-}
-
-.hero-product {
-    font-size: 19px;
-    color: #a5b4fc;
-    font-weight: 600;
-    margin-top: 5px;
-}
-
-.hero-author {
-    font-size: 14px;
-    color: #8f9bb3;
-    font-weight: 500;
-    margin-top: 9px;
-    letter-spacing: .02em;
-}
-
-.hero-tagline {
-    font-size: 24px;
-    font-weight: 600;
-    margin-top: 25px;
-    color: #f5f7ff;
-}
-
-.hero-description {
-    max-width: 720px;
-    margin: 15px auto;
-    color: #9ca3b8;
-    font-size: 16px;
-    line-height: 1.7;
-}
-
-.status-pill {
-    display: inline-block;
-    margin-top: 18px;
-    padding: 9px 17px;
-    border-radius: 999px;
-    background: rgba(99,102,241,.12);
-    border: 1px solid rgba(129,140,248,.25);
-    color: #c7d2fe;
-    font-size: 13px;
-}
-
-/* WORKFLOW */
-.workflow {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 14px;
-    margin: 25px 0 35px;
-    flex-wrap: wrap;
-}
-
-.workflow-step {
-    padding: 11px 18px;
-    border-radius: 12px;
-    background: rgba(255,255,255,.035);
-    border: 1px solid rgba(255,255,255,.08);
-    color: #cbd5e1;
-}
-
-.workflow-arrow {
-    color: #818cf8;
-    font-size: 20px;
-}
-
-/* CARDS */
-.saas-card {
-    background: var(--card) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 22px !important;
-    padding: 28px !important;
-    margin-bottom: 22px !important;
-    box-shadow: 0 20px 60px rgba(0,0,0,.18);
-}
-
-.section-title {
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 5px;
-    color: #f5f7ff;
-}
-
-.section-description {
-    color: #8f9bb3;
-    margin-bottom: 20px;
-}
-
-/* STREAMLIT INPUTS */
-[data-baseweb="textarea"] > div,
-[data-baseweb="input"] > div,
-[data-baseweb="select"] > div {
-    background: rgba(2,6,23,.7) !important;
-    border-color: rgba(148,163,184,.16) !important;
-    border-radius: 14px !important;
-}
-
-textarea,
-input {
-    color: #f8fafc !important;
-}
-
-textarea::placeholder,
-input::placeholder {
-    color: #64748b !important;
-}
-
-[data-baseweb="select"] * {
-    color: #f8fafc !important;
-}
-
-label, [data-testid="stWidgetLabel"] p {
-    color: #cbd5e1 !important;
-}
-
-/* RADIO */
-[data-testid="stRadio"] label {
-    color: #cbd5e1 !important;
-}
-
-/* BUTTON */
-.stButton > button {
-    min-height: 58px !important;
-    border-radius: 15px !important;
-    font-size: 17px !important;
-    font-weight: 700 !important;
-    border: 1px solid rgba(129,140,248,.2) !important;
-    background: linear-gradient(135deg,#6366f1,#8b5cf6,#0891b2) !important;
-    color: white !important;
-    box-shadow: 0 12px 35px rgba(79,70,229,.22);
-}
-
-.stButton > button:hover {
-    filter: brightness(1.08);
-    transform: translateY(-1px);
-}
-
-/* SCORE */
-.score-hero {
-    text-align: center;
-    padding: 35px;
-    border-radius: 22px;
-    background:
-        radial-gradient(circle at center, rgba(99,102,241,.16), transparent 60%),
-        rgba(15,23,42,.7);
-    border: 1px solid rgba(129,140,248,.16);
-}
-
-.score-number {
-    font-size: 72px;
-    font-weight: 800;
-    line-height: 1;
-    color: #f8fafc;
-}
-
-.score-label {
-    color: #9ca3b8;
-    margin-top: 10px;
-}
-
-.verdict {
-    display: inline-block;
-    margin-top: 15px;
-    padding: 8px 16px;
-    border-radius: 999px;
-    background: rgba(99,102,241,.14);
-    color: #c7d2fe;
-}
-
-/* DIMENSIONS */
-.dimension-card {
-    background: rgba(255,255,255,.025);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 17px;
-    padding: 20px;
-    min-height: 125px;
-}
-
-.dimension-name {
-    color: #aab4c8;
-    font-size: 14px;
-}
-
-.dimension-score {
-    font-size: 29px;
-    font-weight: 750;
-    margin: 8px 0;
-    color: #f8fafc;
-}
-
-.dimension-bar {
-    height: 6px;
-    background: rgba(255,255,255,.07);
-    border-radius: 99px;
-    overflow: hidden;
-}
-
-.dimension-fill {
-    height: 100%;
-    background: linear-gradient(90deg,#6366f1,#8b5cf6,#22d3ee);
-    border-radius: 99px;
-}
-
-/* INSIGHTS */
-.insight,
-.concern,
-.recommendation {
-    background: rgba(255,255,255,.025);
-    border: 1px solid rgba(255,255,255,.07);
-    border-radius: 16px;
-    padding: 20px;
-    margin: 10px 0;
-    color: #e2e8f0;
-}
-
-.insight-label {
-    color: #a5b4fc;
-    font-size: 13px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-}
-
-.concern-title {
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: #f1f5f9;
-}
-
-.concern-evidence,
-.concern-impact {
-    color: #aab4c8;
-    line-height: 1.6;
-    margin-top: 7px;
-}
-
-.recommendation-number {
-    color: #818cf8;
-    font-weight: 800;
-    margin-right: 8px;
-}
-
-/* REWRITE */
-.original-box,
-.rewrite-box {
-    padding: 22px;
-    border-radius: 17px;
-    line-height: 1.7;
-    white-space: pre-wrap;
-    min-height: 180px;
-}
-
-.original-box {
-    background: rgba(255,255,255,.025);
-    border: 1px solid rgba(255,255,255,.07);
-}
-
-.rewrite-box {
-    background: rgba(99,102,241,.07);
-    border: 1px solid rgba(129,140,248,.2);
-}
-
-.box-label {
-    color: #9ca3b8;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin-bottom: 10px;
-    font-weight: 700;
-}
-
-/* MOBILE */
-@media (max-width: 700px) {
-    .hero-title { font-size: 42px; }
-    .hero-tagline { font-size: 20px; }
-    .block-container { padding: 20px 14px 50px !important; }
-    .saas-card { padding: 20px !important; }
-}
-</style>
-"""
-
-render_markdown(CUSTOM_CSS, unsafe_allow_html=True)
-
-
 # ============================================================
 # HELPERS
 # ============================================================
@@ -392,46 +38,9 @@ def get_model() -> str:
             return str(value).strip()
     except Exception:
         pass
-    return os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+    return os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip()
 
 
-def score_card(name: str, score: Any) -> str:
-    score = clamp_score(score)
-    return f"""
-    <div class="dimension-card">
-        <div class="dimension-name">{safe_text(name)}</div>
-        <div class="dimension-score">{score}</div>
-        <div class="dimension-bar">
-            <div class="dimension-fill" style="width:{score}%"></div>
-        </div>
-    </div>
-    """
-
-
-def concern_card(item: Dict[str, Any]) -> str:
-    issue = safe_text(item.get("issue", "Potential concern"))
-    dimension = safe_text(item.get("dimension", ""))
-    evidence = safe_text(item.get("evidence", ""))
-    impact = safe_text(item.get("impact_on_recipient", ""))
-    severity = safe_text(item.get("severity", "Low"))
-
-    return f"""
-    <div class="concern">
-        <div class="concern-title">
-            {issue}
-            <span style="color:#818cf8;">· {dimension}</span>
-        </div>
-        <div class="concern-evidence">
-            <b>Evidence:</b> {evidence}
-        </div>
-        <div class="concern-impact">
-            <b>Recipient impact:</b> {impact}
-        </div>
-        <div style="margin-top:10px;color:#94a3b8;font-size:12px;">
-            Severity: {severity}
-        </div>
-    </div>
-    """
 
 
 def recommendation_card(item: Dict[str, Any], number: int) -> str:
@@ -447,7 +56,6 @@ def recommendation_card(item: Dict[str, Any], number: int) -> str:
         </div>
     </div>
     """
-
 
 # ============================================================
 # GROQ PROMPT
@@ -826,100 +434,448 @@ def build_results(result: Dict[str, Any], original_message: str) -> str:
     </div>
     """
 
+# ============================================================
+# HUMAN TOUCH — SIGNATURE PRODUCT UI
+# ============================================================
 
-# ============================================================
-# SESSION STATE
-# ============================================================
+def score_color(score: int) -> str:
+    if score >= 85:
+        return "#34d399"
+    if score >= 70:
+        return "#a78bfa"
+    if score >= 55:
+        return "#fbbf24"
+    return "#fb7185"
+
+
+def verdict_class(score: int) -> str:
+    if score >= 85:
+        return "good"
+    if score >= 70:
+        return "strong"
+    if score >= 55:
+        return "refine"
+    return "weak"
+
+
+def result_section_title(kicker: str, title: str, description: str = "") -> str:
+    return f"""
+    <div class="result-heading">
+        <div class="result-kicker">{safe_text(kicker)}</div>
+        <div class="result-title">{safe_text(title)}</div>
+        {f'<div class="result-description">{safe_text(description)}</div>' if description else ""}
+    </div>
+    """
+
+
+def dimension_card_v2(name: str, score: int, icon: str) -> str:
+    score = clamp_score(score)
+    return f"""
+    <div class="metric-card">
+        <div class="metric-top">
+            <span class="metric-icon">{icon}</span>
+            <span class="metric-name">{safe_text(name)}</span>
+        </div>
+        <div class="metric-value">{score}<span>/100</span></div>
+        <div class="metric-track">
+            <div class="metric-progress" style="width:{score}%; background:{score_color(score)};"></div>
+        </div>
+        <div class="metric-foot">
+            <span>{'Strong' if score >= 80 else 'Healthy' if score >= 65 else 'Needs work'}</span>
+            <span>{score}%</span>
+        </div>
+    </div>
+    """
+
+
+def concern_card_v2(item: Dict[str, Any], number: int) -> str:
+    issue = safe_text(item.get("issue", "Potential concern"))
+    dimension = safe_text(item.get("dimension", ""))
+    evidence = safe_text(item.get("evidence", ""))
+    impact = safe_text(item.get("impact_on_recipient", ""))
+    severity = safe_text(item.get("severity", "Low"))
+    severity_cls = {"High": "high", "Medium": "medium", "Low": "low"}.get(severity, "low")
+    return f"""
+    <div class="issue-card">
+        <div class="issue-index">0{number}</div>
+        <div class="issue-main">
+            <div class="issue-row">
+                <div class="issue-title">{issue}</div>
+                <span class="severity {severity_cls}">{severity}</span>
+            </div>
+            <div class="issue-dimension">{dimension}</div>
+            <div class="issue-detail"><b>Evidence</b><br>{evidence}</div>
+            <div class="issue-detail"><b>Recipient impact</b><br>{impact}</div>
+        </div>
+    </div>
+    """
+
+
+def recommendation_card_v2(item: Dict[str, Any], number: int) -> str:
+    title = safe_text(item.get("title", "Recommended improvement"))
+    explanation = safe_text(item.get("explanation", ""))
+    return f"""
+    <div class="recommend-card">
+        <div class="recommend-number">{number:02d}</div>
+        <div>
+            <div class="recommend-title">{title}</div>
+            <div class="recommend-copy">{explanation}</div>
+        </div>
+    </div>
+    """
+
+
+def build_results_v2(result: Dict[str, Any], original_message: str) -> str:
+    scores = result["scores"]
+    overall = clamp_score(result["overall_human_touch_score"])
+    concerns = result.get("potential_concerns", [])
+    recommendations = result.get("recommended_changes", [])
+    rewrite = result.get("recommended_rewrite", "")
+
+    concern_html = "".join(
+        concern_card_v2(c, i + 1) for i, c in enumerate(concerns)
+    )
+    if not concern_html:
+        concern_html = """
+        <div class="empty-state">
+            <span class="empty-icon">✓</span>
+            <div><b>No major human-touch concerns</b><br>
+            <span>The message is already showing strong recipient awareness.</span></div>
+        </div>
+        """
+
+    recommendation_html = "".join(
+        recommendation_card_v2(r, i + 1)
+        for i, r in enumerate(recommendations)
+    )
+    if not recommendation_html:
+        recommendation_html = """
+        <div class="empty-state">
+            <span class="empty-icon">✦</span>
+            <div><b>No major changes recommended</b><br>
+            <span>The current communication is relatively strong.</span></div>
+        </div>
+        """
+
+    circumference = 2 * 3.14159 * 48
+    dash = circumference * overall / 100
+    verdict_cls = verdict_class(overall)
+
+    metrics = [
+        ("Empathy", scores["empathy"], "♡"),
+        ("Naturalness", scores["naturalness"], "◌"),
+        ("Personalization", scores["personalization"], "◎"),
+        ("Context Awareness", scores["context_awareness"], "⌁"),
+        ("Brand Voice", scores["brand_voice"], "◈"),
+    ]
+    metric_html = "".join(
+        dimension_card_v2(name, score, icon) for name, score, icon in metrics
+    )
+
+    return f"""
+    <div class="report-shell">
+        <div class="score-panel">
+            <div class="score-copy">
+                <div class="result-kicker">COMMUNICATION INTELLIGENCE</div>
+                <div class="score-heading">How human does this message feel?</div>
+                <div class="score-summary">{safe_text(result.get("summary", ""))}</div>
+                <div class="verdict-pill {verdict_cls}">
+                    <span class="pulse-dot"></span>{safe_text(result.get("verdict", ""))}
+                </div>
+            </div>
+            <div class="score-ring-wrap">
+                <svg class="score-ring" viewBox="0 0 120 120">
+                    <circle class="ring-bg" cx="60" cy="60" r="48"></circle>
+                    <circle class="ring-value" cx="60" cy="60" r="48"
+                        stroke-dasharray="{dash:.1f} {circumference:.1f}"></circle>
+                </svg>
+                <div class="score-center">
+                    <div class="score-number">{overall}</div>
+                    <div class="score-denom">/ 100</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-grid">{metric_html}</div>
+
+        <div class="insight-grid">
+            <div class="insight-panel">
+                <div class="panel-label">RECIPIENT PERSPECTIVE</div>
+                <div class="panel-title">Through their eyes</div>
+                <div class="panel-copy">{safe_text(result.get("recipient_perspective", ""))}</div>
+            </div>
+            <div class="insight-panel accent-panel">
+                <div class="panel-label">EXECUTIVE READOUT</div>
+                <div class="panel-title">The signal</div>
+                <div class="panel-copy">{safe_text(result.get("summary", ""))}</div>
+            </div>
+        </div>
+
+        <div class="report-block">
+            {result_section_title("01 · FRICTION MAP", "What could feel less human?",
+                "Specific evidence that may weaken the recipient experience.")}
+            <div class="issue-list">{concern_html}</div>
+        </div>
+
+        <div class="report-block">
+            {result_section_title("02 · IMPROVEMENT PLAN", "How to make it more human",
+                "Practical changes grounded in the message and supplied context.")}
+            <div class="recommend-list">{recommendation_html}</div>
+        </div>
+
+        <div class="report-block">
+            {result_section_title("03 · REWRITE", "A stronger human-touch version",
+                "Meaning and factual claims are preserved; unsupported information is never added.")}
+            <div class="rewrite-grid">
+                <div class="copy-panel">
+                    <div class="copy-label">ORIGINAL</div>
+                    <div class="copy-text">{safe_text(original_message)}</div>
+                </div>
+                <div class="copy-panel rewrite-panel">
+                    <div class="copy-label">RECOMMENDED REWRITE</div>
+                    <div class="copy-text">{safe_text(rewrite)}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """
+
+
+st.set_page_config(
+    page_title="Human Touch · Quality Layer",
+    page_icon="✦",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+CUSTOM_CSS_V2 = """
+<style>
+:root {
+    --bg: #050816;
+    --surface: rgba(13,18,38,.76);
+    --line: rgba(255,255,255,.09);
+    --text: #f6f7fb;
+    --muted: #8993aa;
+}
+html, body, [data-testid="stAppViewContainer"] {
+    background:
+        radial-gradient(900px 500px at 8% -5%, rgba(98,80,245,.17), transparent 60%),
+        radial-gradient(700px 450px at 96% 12%, rgba(28,190,224,.11), transparent 60%),
+        linear-gradient(180deg,#070b1d 0%,#050816 55%,#040610 100%) !important;
+    color: var(--text) !important;
+}
+[data-testid="stHeader"] { background: transparent !important; }
+.block-container { max-width: 1240px !important; padding: 26px 28px 80px !important; }
+
+.hero-v2 {
+    position: relative; overflow: hidden; text-align: center; padding: 72px 30px 54px;
+    border: 1px solid rgba(255,255,255,.07); border-radius: 32px;
+    background: linear-gradient(135deg,rgba(255,255,255,.035),rgba(255,255,255,.012)),
+                radial-gradient(circle at 50% 0%,rgba(139,124,246,.13),transparent 48%);
+    box-shadow: 0 35px 100px rgba(0,0,0,.28);
+}
+.hero-v2:before {
+    content:""; position:absolute; width:520px; height:1px; left:50%; top:0;
+    transform:translateX(-50%); background:linear-gradient(90deg,transparent,#8b7cf6,#42d9ee,transparent);
+}
+.eyebrow { color:#a9a2ff; font-size:11px; font-weight:800; letter-spacing:.20em; text-transform:uppercase; }
+.hero-title-v2 {
+    margin-top:15px; font-size:clamp(48px,7vw,78px); line-height:.98; letter-spacing:-.055em; font-weight:850;
+    background:linear-gradient(100deg,#fff 15%,#c9c2ff 58%,#71e7f5 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.hero-product-v2 { margin-top:12px; font-size:18px; font-weight:650; color:#c3c9da; }
+.hero-author-v2 { margin-top:9px; color:#77839d; font-size:13px; letter-spacing:.035em; }
+.hero-tagline-v2 { margin:28px auto 0; max-width:760px; font-size:clamp(21px,3vw,29px); line-height:1.3; font-weight:650; letter-spacing:-.025em; }
+.hero-description-v2 { max-width:720px; margin:15px auto 0; color:#8c96ac; font-size:15px; line-height:1.75; }
+.status-v2 {
+    display:inline-flex; align-items:center; gap:8px; margin-top:24px; padding:9px 15px;
+    border-radius:999px; color:#bceff5; background:rgba(66,217,238,.055);
+    border:1px solid rgba(66,217,238,.16); font-size:12px; font-weight:650;
+}
+.live-dot { width:7px; height:7px; border-radius:50%; background:#42d9ee; box-shadow:0 0 14px #42d9ee; }
+
+.flow-v2 { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:center; gap:13px; margin:25px 0 32px; }
+.flow-step { padding:16px 18px; border-radius:16px; border:1px solid rgba(255,255,255,.075); background:rgba(255,255,255,.025); }
+.flow-num { color:#8f84ff; font-size:10px; font-weight:850; letter-spacing:.14em; }
+.flow-name { margin-top:5px; color:#d9deea; font-size:13px; font-weight:650; }
+.flow-arrow { color:#68728a; font-size:20px; }
+
+.section-card-v2 {
+    padding:27px; border-radius:24px; border:1px solid var(--line); background:var(--surface);
+    box-shadow:0 24px 70px rgba(0,0,0,.17); margin-bottom:18px;
+}
+.card-kicker { color:#9289ff; font-size:10px; font-weight:850; letter-spacing:.16em; }
+.card-title { margin-top:7px; color:#f4f5fa; font-size:22px; font-weight:750; letter-spacing:-.025em; }
+.card-subtitle { margin-top:5px; color:#808ba3; font-size:13px; line-height:1.6; }
+
+[data-baseweb="textarea"] > div,[data-baseweb="input"] > div,[data-baseweb="select"] > div {
+    background:rgba(4,8,22,.78) !important; border:1px solid rgba(255,255,255,.085) !important;
+    border-radius:14px !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+[data-baseweb="textarea"] > div:focus-within,[data-baseweb="input"] > div:focus-within,[data-baseweb="select"] > div:focus-within {
+    border-color:rgba(139,124,246,.55) !important; box-shadow:0 0 0 3px rgba(139,124,246,.08) !important;
+}
+textarea,input { color:#f5f7fb !important; }
+textarea::placeholder,input::placeholder { color:#566179 !important; }
+[data-baseweb="select"] * { color:#f5f7fb !important; }
+label,[data-testid="stWidgetLabel"] p,[data-testid="stRadio"] label { color:#aeb7c9 !important; font-size:12px !important; font-weight:600 !important; }
+
+.stButton > button {
+    min-height:62px !important; border-radius:16px !important; border:1px solid rgba(255,255,255,.13) !important;
+    background:linear-gradient(100deg,#7568f5 0%,#956cf4 48%,#18aeca 100%) !important;
+    color:white !important; font-size:15px !important; font-weight:800 !important;
+    box-shadow:0 18px 45px rgba(90,75,240,.23) !important;
+}
+.stButton > button:hover { filter:brightness(1.07); transform:translateY(-2px); }
+
+.char-count { color:#59657d; font-size:11px; margin:-7px 0 18px; }
+.char-count b { color:#a39aff; }
+.disclaimer-v2 { margin-top:18px; text-align:center; color:#59647b; font-size:11px; line-height:1.6; }
+
+.report-shell { margin-top:20px; }
+.score-panel {
+    display:grid; grid-template-columns:1fr 190px; align-items:center; gap:30px; padding:34px;
+    border-radius:26px; border:1px solid rgba(139,124,246,.18);
+    background:radial-gradient(circle at 75% 40%,rgba(139,124,246,.12),transparent 35%),
+               linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+    box-shadow:0 30px 90px rgba(0,0,0,.22);
+}
+.result-kicker { color:#8f84ff; font-size:10px; font-weight:850; letter-spacing:.18em; }
+.score-heading { margin-top:10px; font-size:clamp(25px,4vw,38px); line-height:1.08; font-weight:780; letter-spacing:-.04em; }
+.score-summary { max-width:650px; margin-top:13px; color:#8e99b0; line-height:1.7; font-size:14px; }
+.verdict-pill { display:inline-flex; align-items:center; gap:8px; margin-top:18px; padding:8px 13px; border-radius:999px; font-size:12px; font-weight:700; border:1px solid rgba(255,255,255,.08); }
+.verdict-pill.good { color:#a7f3d0; background:rgba(52,211,153,.08); }
+.verdict-pill.strong { color:#ddd6fe; background:rgba(167,139,250,.08); }
+.verdict-pill.refine { color:#fde68a; background:rgba(251,191,36,.07); }
+.verdict-pill.weak { color:#fecdd3; background:rgba(251,113,133,.07); }
+.pulse-dot { width:6px; height:6px; border-radius:50%; background:currentColor; box-shadow:0 0 10px currentColor; }
+
+.score-ring-wrap { position:relative; width:170px; height:170px; margin:auto; }
+.score-ring { width:170px; height:170px; transform:rotate(-90deg); }
+.ring-bg { fill:none; stroke:rgba(255,255,255,.07); stroke-width:7; }
+.ring-value { fill:none; stroke:#9b8cff; stroke-width:7; stroke-linecap:round; filter:drop-shadow(0 0 7px rgba(139,124,246,.45)); }
+.score-center { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+.score-number { font-size:43px; line-height:1; font-weight:850; letter-spacing:-.06em; }
+.score-denom { margin-top:5px; color:#69748c; font-size:11px; }
+
+.metrics-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-top:13px; }
+.metric-card { padding:19px; border:1px solid rgba(255,255,255,.075); border-radius:18px; background:rgba(255,255,255,.025); }
+.metric-top { display:flex; align-items:center; gap:8px; }
+.metric-icon { color:#a69cff; font-size:14px; }
+.metric-name { color:#9ca6ba; font-size:11px; font-weight:650; }
+.metric-value { margin-top:13px; font-size:28px; font-weight:800; letter-spacing:-.04em; }
+.metric-value span { color:#566179; font-size:10px; font-weight:600; margin-left:2px; }
+.metric-track { height:5px; margin-top:13px; border-radius:99px; background:rgba(255,255,255,.07); overflow:hidden; }
+.metric-progress { height:100%; border-radius:inherit; }
+.metric-foot { display:flex; justify-content:space-between; margin-top:8px; color:#566179; font-size:10px; }
+
+.insight-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; margin-top:13px; }
+.insight-panel { min-height:175px; padding:24px; border-radius:20px; border:1px solid rgba(255,255,255,.075); background:rgba(255,255,255,.025); }
+.accent-panel { background:linear-gradient(135deg,rgba(139,124,246,.07),rgba(66,217,238,.025)); border-color:rgba(139,124,246,.13); }
+.panel-label { color:#8179d8; font-size:9px; font-weight:850; letter-spacing:.16em; }
+.panel-title { margin-top:9px; color:#eef0f7; font-size:17px; font-weight:720; }
+.panel-copy { margin-top:10px; color:#8e99b0; line-height:1.75; font-size:13px; }
+
+.report-block { margin-top:34px; }
+.result-heading { margin-bottom:16px; }
+.result-title { margin-top:7px; font-size:26px; font-weight:760; letter-spacing:-.035em; }
+.result-description { margin-top:5px; color:#737f97; font-size:13px; }
+
+.issue-card,.recommend-card {
+    display:grid; grid-template-columns:42px 1fr; gap:15px; padding:19px; margin:10px 0;
+    border-radius:17px; border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.023);
+}
+.issue-index,.recommend-number { color:#7269c9; font-size:11px; font-weight:850; letter-spacing:.08em; }
+.issue-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.issue-title { color:#e8ebf3; font-size:14px; font-weight:720; }
+.issue-dimension { margin-top:4px; color:#6f7a92; font-size:10px; }
+.issue-detail { margin-top:11px; color:#7f8aa1; font-size:12px; line-height:1.65; }
+.issue-detail b { color:#b4bdcd; font-weight:650; }
+.severity { padding:4px 8px; border-radius:999px; font-size:9px; font-weight:750; border:1px solid rgba(255,255,255,.07); }
+.severity.high { color:#fda4af; background:rgba(251,113,133,.07); }
+.severity.medium { color:#fcd34d; background:rgba(251,191,36,.07); }
+.severity.low { color:#86efac; background:rgba(52,211,153,.07); }
+
+.recommend-title { color:#e9ecf4; font-size:14px; font-weight:720; }
+.recommend-copy { margin-top:7px; color:#7f8aa1; font-size:12px; line-height:1.65; }
+.empty-state {
+    display:flex; align-items:center; gap:13px; padding:18px; border-radius:16px;
+    border:1px dashed rgba(255,255,255,.09); color:#8b96ab; font-size:12px; line-height:1.55;
+}
+.empty-state b { color:#d8ddea; }
+.empty-icon { width:30px; height:30px; display:grid; place-items:center; border-radius:9px; background:rgba(139,124,246,.08); color:#a39aff; }
+
+.rewrite-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+.copy-panel { min-height:210px; padding:21px; border-radius:18px; border:1px solid rgba(255,255,255,.075); background:rgba(255,255,255,.023); }
+.rewrite-panel { background:linear-gradient(135deg,rgba(139,124,246,.08),rgba(66,217,238,.035)); border-color:rgba(139,124,246,.15); }
+.copy-label { color:#707b92; font-size:9px; font-weight:850; letter-spacing:.16em; }
+.copy-text { margin-top:12px; color:#bfc6d5; line-height:1.75; font-size:13px; white-space:pre-wrap; }
+
+.footer-v2 { margin-top:58px; padding-top:22px; border-top:1px solid rgba(255,255,255,.06); text-align:center; color:#505b71; font-size:11px; line-height:1.7; }
+.footer-v2 b { color:#7e88a0; font-weight:650; }
+
+@media (max-width:900px) {
+    .metrics-grid { grid-template-columns:repeat(2,1fr); }
+    .score-panel { grid-template-columns:1fr; }
+    .score-ring-wrap { order:-1; }
+    .insight-grid,.rewrite-grid { grid-template-columns:1fr; }
+}
+@media (max-width:650px) {
+    .block-container { padding:14px 12px 55px !important; }
+    .hero-v2 { padding:48px 18px 38px; border-radius:24px; }
+    .hero-title-v2 { font-size:48px; }
+    .flow-v2 { grid-template-columns:1fr; }
+    .flow-arrow { display:none; }
+    .metrics-grid { grid-template-columns:1fr; }
+    .section-card-v2 { padding:20px; }
+    .score-panel { padding:22px; }
+}
+</style>
+"""
+
+st.html(CUSTOM_CSS_V2)
+
 if "result" not in st.session_state:
     st.session_state.result = None
-
 if "analyzed_message" not in st.session_state:
     st.session_state.analyzed_message = ""
 
-
-# ============================================================
-# HERO
-# ============================================================
-render_markdown(
-    """
-    <div class="hero">
-
-        <div class="hero-title">
-            Human Touch
-        </div>
-
-        <div class="hero-product">
-            Quality Layer
-        </div>
-
-        <div class="hero-author">
-            By Engr. Muhammad Mubashir Asim
-        </div>
-
-        <div class="hero-tagline">
-            AI can write the message.
-            We measure whether it feels human.
-        </div>
-
-        <div class="hero-description">
-            Evaluate AI-generated or human-written communication
-            for empathy, naturalness, personalization, context-awareness,
-            and brand voice before it reaches another person.
-        </div>
-
-        <div class="status-pill">
-            ● Human Intelligence Layer Active
-        </div>
-
+st.html("""
+<div class="hero-v2">
+    <div class="eyebrow">Communication Quality Intelligence</div>
+    <div class="hero-title-v2">Human Touch</div>
+    <div class="hero-product-v2">Quality Layer</div>
+    <div class="hero-author-v2">By Engr. Muhammad Mubashir Asim</div>
+    <div class="hero-tagline-v2">
+        AI can write the message.<br>
+        We measure whether it feels human.
     </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# ============================================================
-# WORKFLOW
-# ============================================================
-render_markdown(
-    """
-    <div class="workflow">
-
-        <div class="workflow-step">
-            <b>01</b> — Message
-        </div>
-
-        <div class="workflow-arrow">→</div>
-
-        <div class="workflow-step">
-            <b>02</b> — Recipient Context
-        </div>
-
-        <div class="workflow-arrow">→</div>
-
-        <div class="workflow-step">
-            <b>03</b> — Human-Touch Analysis
-        </div>
-
+    <div class="hero-description-v2">
+        A communication intelligence layer that evaluates the recipient experience
+        before an email, support reply, business message, or social post reaches another person.
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+    <div class="status-v2"><span class="live-dot"></span>Human Intelligence Layer Active</div>
+</div>
+""")
 
+st.html("""
+<div class="flow-v2">
+    <div class="flow-step"><div class="flow-num">01</div><div class="flow-name">Message</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><div class="flow-num">02</div><div class="flow-name">Recipient context</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><div class="flow-num">03</div><div class="flow-name">Human-touch analysis</div></div>
+</div>
+""")
 
-# ============================================================
-# MESSAGE CARD
-# ============================================================
-render_markdown(
-    """
-    <div class="saas-card">
-        <div class="section-title">Your Message</div>
-        <div class="section-description">
-            Paste the communication you want to evaluate.
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+st.html("""
+<div class="section-card-v2">
+    <div class="card-kicker">STEP 01</div>
+    <div class="card-title">Bring the message</div>
+    <div class="card-subtitle">Paste the communication exactly as it would be sent.</div>
+</div>
+""")
 
 content_type = st.radio(
     "Communication type",
@@ -931,95 +887,52 @@ content_type = st.radio(
 message = st.text_area(
     "Message",
     placeholder="Paste the message you want to evaluate…",
-    height=250,
+    height=240,
     label_visibility="collapsed",
 )
 
-render_markdown(
-    f'<div style="color:#737f98;font-size:13px;margin:-10px 0 22px;">'
-    f'<b style="color:#a5b4fc;">{len(message or "")}</b> characters'
-    f'</div>',
-    unsafe_allow_html=True,
+st.html(
+    f'<div class="char-count"><b>{len(message or "")}</b> characters · '
+    f'Only the supplied content is evaluated</div>'
 )
 
-
-# ============================================================
-# CONTEXT CARD
-# ============================================================
-render_markdown(
-    """
-    <div class="saas-card">
-        <div class="section-title">
-            Help us understand the human on the other side.
-        </div>
-        <div class="section-description">
-            Context helps the quality layer judge whether the message
-            actually fits the person and situation.
-        </div>
+st.html("""
+<div class="section-card-v2">
+    <div class="card-kicker">STEP 02</div>
+    <div class="card-title">Add the human context</div>
+    <div class="card-subtitle">
+        Give the evaluator enough context to judge whether the message fits the person,
+        purpose, and brand.
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+</div>
+""")
 
-left, right = st.columns(2)
-
+left, right = st.columns(2, gap="large")
 with left:
-    audience = st.text_input(
-        "Audience / Recipient",
-        placeholder="Existing customer",
-    )
-
-    purpose = st.text_input(
-        "Purpose",
-        placeholder="Apologize for a delayed delivery",
-    )
-
+    audience = st.text_input("Audience / Recipient", placeholder="Existing customer")
+    purpose = st.text_input("Purpose", placeholder="Apologize for a delayed delivery")
 with right:
-    brand_voice = st.text_input(
-        "Brand Voice",
-        placeholder="Warm, professional, concise",
-    )
-
+    brand_voice = st.text_input("Brand Voice", placeholder="Warm, professional, concise")
     additional_context = st.text_input(
         "Additional Context",
         placeholder="The customer has already waited 10 days.",
     )
 
+st.write("")
+analyze = st.button("✦  Analyze Human Touch", type="primary", use_container_width=True)
 
-# ============================================================
-# CTA
-# ============================================================
-analyze = st.button(
-    "✦  Analyze Human Touch",
-    type="primary",
-    use_container_width=True,
-)
+st.html("""
+<div class="disclaimer-v2">
+    Communication quality analysis — <b>not</b> a definitive AI detector.
+</div>
+""")
 
-render_markdown(
-    """
-    <div style="
-        text-align:center;
-        color:#737f98;
-        font-size:13px;
-        margin:8px 0 25px;
-    ">
-        Your message is analyzed for communication quality —
-        not treated as a definitive AI detector.
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# ============================================================
-# ANALYSIS
-# ============================================================
 if analyze:
     if not message.strip():
         st.error("Please paste a message before analyzing.")
         st.session_state.result = None
     else:
-        with st.spinner("Understanding the recipient's perspective…"):
+        with st.spinner("Reading the message through the recipient's eyes…"):
             try:
                 result = evaluate_message(
                     message=message.strip(),
@@ -1029,84 +942,40 @@ if analyze:
                     brand_voice=brand_voice.strip(),
                     additional_context=additional_context.strip(),
                 )
-
                 st.session_state.result = result
                 st.session_state.analyzed_message = message.strip()
-
             except Exception as exc:
                 st.session_state.result = None
-
                 error_text = str(exc)
-
-                if any(
-                    token in error_text.lower()
-                    for token in ["401", "authentication", "api key", "unauthorized"]
-                ):
-                    st.error(
-                        "Groq authentication failed. Please check that your "
-                        "GROQ_API_KEY in Streamlit Secrets is correct."
-                    )
+                if any(token in error_text.lower() for token in ["401", "authentication", "api key", "unauthorized"]):
+                    st.error("Groq authentication failed. Check GROQ_API_KEY in Streamlit Secrets.")
                 elif "rate" in error_text.lower() and "limit" in error_text.lower():
-                    st.error(
-                        "Groq rate limit reached. Please wait a moment and try again."
-                    )
+                    st.error("Groq rate limit reached. Please wait a moment and try again.")
                 elif "model" in error_text.lower() and (
-                    "not found" in error_text.lower()
-                    or "does not exist" in error_text.lower()
+                    "not found" in error_text.lower() or "does not exist" in error_text.lower()
                 ):
                     st.error(
                         f"Groq model error. Current model: {get_model()}. "
-                        "Check the model name in Streamlit Secrets."
+                        "Set GROQ_MODEL to a currently supported Groq model in Streamlit Secrets."
                     )
                 else:
-                    # Temporary diagnostic message so deployment problems are visible.
                     st.error(f"Evaluation failed: {error_text}")
 
-
-# ============================================================
-# RESULTS
-# ============================================================
 if st.session_state.result:
     result = st.session_state.result
-
-    render_markdown(
-        '<div class="section-title" style="margin-top:35px;">Your Human-Touch Report</div>',
-        unsafe_allow_html=True,
-    )
-
-    render_markdown(
-        '<div class="saas-card">',
-        unsafe_allow_html=True,
-    )
-
-    render_markdown(
-        build_results(
-            result,
-            st.session_state.analyzed_message,
-        ),
-        unsafe_allow_html=True,
-    )
-
-    render_markdown("</div>", unsafe_allow_html=True)
-
-
-# ============================================================
-# FOOTER
-# ============================================================
-render_markdown(
-    """
-    <div style="
-        text-align:center;
-        margin-top:35px;
-        padding-top:20px;
-        border-top:1px solid rgba(148,163,184,.08);
-        color:#64748b;
-        font-size:12px;
-        line-height:1.6;
-    ">
-        Human Touch Quality Layer evaluates communication quality.
-        It does not determine whether content was written by a human or AI.
+    st.html("""
+    <div style="height:1px;background:rgba(255,255,255,.06);margin:42px 0 34px;"></div>
+    <div class="eyebrow" style="text-align:center;">ANALYSIS COMPLETE</div>
+    <div style="text-align:center;font-size:32px;font-weight:800;letter-spacing:-.04em;margin-top:7px;">
+        Your Human-Touch Report
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+    """)
+    st.html(build_results_v2(result, st.session_state.analyzed_message))
+
+st.html("""
+<div class="footer-v2">
+    <b>Human Touch Quality Layer</b><br>
+    Evaluates communication quality from the recipient's perspective.
+    It does not determine whether content was written by a human or AI.
+</div>
+""")
