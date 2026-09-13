@@ -308,7 +308,7 @@ def evaluate_message(
     return normalize_result(extract_json(content))
 
 # ============================================================
-# HUMAN TOUCH — SIGNATURE EDITORIAL CONSOLE
+# HUMAN TOUCH — PREMIUM PRODUCT UI
 # ============================================================
 
 st.set_page_config(
@@ -318,86 +318,90 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ---------- Result presentation ----------
-def score_tone(score: int) -> str:
+# ---------- Visual helpers ----------
+def score_color(score: int) -> str:
     score = clamp_score(score)
     if score >= 85:
-        return "#C8F36B"
+        return "#4ADE80"
     if score >= 70:
-        return "#A99BFF"
+        return "#A78BFA"
     if score >= 55:
-        return "#F2C66D"
-    return "#F27F91"
+        return "#FBBF24"
+    return "#FB7185"
 
 
-def metric_card(label: str, score: Any, code: str) -> str:
-    score = clamp_score(score)
-    tone = score_tone(score)
+def metric_card(label: str, score: Any, icon: str) -> str:
+    value = clamp_score(score)
+    color = score_color(value)
     return f"""
-    <div class="metric-card">
-        <div class="metric-code">{safe_text(code)}</div>
-        <div class="metric-name">{safe_text(label)}</div>
-        <div class="metric-value" style="color:{tone};">{score}<span>/100</span></div>
-        <div class="metric-track"><i style="width:{score}%;background:{tone};"></i></div>
+    <div class="metric">
+        <div class="metric-icon">{icon}</div>
+        <div class="metric-label">{safe_text(label)}</div>
+        <div class="metric-score">{value}</div>
+        <div class="metric-bar">
+            <span style="width:{value}%;background:{color};"></span>
+        </div>
     </div>
     """
 
 
-def issue_card(item: Dict[str, Any], number: int) -> str:
+def concern_card(item: Dict[str, Any], number: int) -> str:
     severity = safe_text(item.get("severity", "Low"))
     sev = severity.lower() if severity.lower() in {"low", "medium", "high"} else "low"
+
     return f"""
-    <div class="issue-card">
-        <div class="index">0{number}</div>
-        <div>
-            <div class="issue-head">
-                <div>
-                    <div class="issue-title">{safe_text(item.get("issue", "Potential concern"))}</div>
-                    <div class="issue-dim">{safe_text(item.get("dimension", ""))}</div>
-                </div>
-                <span class="severity {sev}">{severity}</span>
-            </div>
-            <div class="issue-detail"><b>Evidence</b>{safe_text(item.get("evidence", ""))}</div>
-            <div class="issue-detail"><b>Recipient impact</b>{safe_text(item.get("impact_on_recipient", ""))}</div>
+    <div class="list-card">
+        <div class="list-number">0{number}</div>
+        <div class="list-content">
+            <div class="list-title">{safe_text(item.get("issue", "Potential concern"))}</div>
+            <div class="list-meta">{safe_text(item.get("dimension", ""))}</div>
+            <div class="list-copy"><b>Evidence:</b> {safe_text(item.get("evidence", ""))}</div>
+            <div class="list-copy"><b>Impact:</b> {safe_text(item.get("impact_on_recipient", ""))}</div>
         </div>
+        <span class="severity {sev}">{severity}</span>
     </div>
     """
 
 
 def recommendation_card(item: Dict[str, Any], number: int) -> str:
     return f"""
-    <div class="recommend-card">
-        <div class="index">0{number}</div>
+    <div class="recommendation">
+        <div class="list-number">0{number}</div>
         <div>
-            <div class="recommend-title">{safe_text(item.get("title", "Recommended improvement"))}</div>
-            <div class="recommend-copy">{safe_text(item.get("explanation", ""))}</div>
+            <div class="list-title">{safe_text(item.get("title", "Recommended improvement"))}</div>
+            <div class="list-copy">{safe_text(item.get("explanation", ""))}</div>
         </div>
-        <div class="recommend-arrow">↗</div>
+        <div class="arrow">→</div>
     </div>
     """
 
 
-def results_html(result: Dict[str, Any], original: str) -> str:
+def results_view(result: Dict[str, Any], original: str) -> str:
     overall = clamp_score(result.get("overall_human_touch_score", 0))
-    scores = result["scores"]
-    tone = score_tone(overall)
+    tone = score_color(overall)
+    circumference = 301.59
+    dash = circumference * overall / 100
 
     metrics = "".join([
-        metric_card("Empathy", scores["empathy"], "01"),
-        metric_card("Naturalness", scores["naturalness"], "02"),
-        metric_card("Personalization", scores["personalization"], "03"),
-        metric_card("Context Awareness", scores["context_awareness"], "04"),
-        metric_card("Brand Voice", scores["brand_voice"], "05"),
+        metric_card("Empathy", result["scores"]["empathy"], "♥"),
+        metric_card("Naturalness", result["scores"]["naturalness"], "✦"),
+        metric_card("Personalization", result["scores"]["personalization"], "◎"),
+        metric_card("Context", result["scores"]["context_awareness"], "◈"),
+        metric_card("Brand Voice", result["scores"]["brand_voice"], "≋"),
     ])
 
     concerns = result.get("potential_concerns", [])
     recommendations = result.get("recommended_changes", [])
 
-    issue_html = "".join(issue_card(x, i + 1) for i, x in enumerate(concerns))
-    if not issue_html:
-        issue_html = """
-        <div class="empty-state"><span>✓</span><div><b>No major friction detected.</b><br>
-        The message is already showing strong recipient awareness.</div></div>
+    concern_html = "".join(
+        concern_card(x, i + 1) for i, x in enumerate(concerns)
+    )
+    if not concern_html:
+        concern_html = """
+        <div class="empty">
+            <span>✓</span><div><b>No major concerns identified.</b><br>
+            The message is already showing strong human-touch signals.</div>
+        </div>
         """
 
     recommendation_html = "".join(
@@ -405,373 +409,447 @@ def results_html(result: Dict[str, Any], original: str) -> str:
     )
     if not recommendation_html:
         recommendation_html = """
-        <div class="empty-state"><span>✦</span><div><b>No major intervention required.</b><br>
-        The current communication is relatively strong.</div></div>
+        <div class="empty">
+            <span>✦</span><div><b>No major changes needed.</b><br>
+            The current communication is relatively strong.</div>
+        </div>
         """
 
-    circumference = 326.73
-    dash = circumference * overall / 100
-
     return f"""
-    <div class="result-hero">
-        <div>
-            <div class="eyebrow">QUALITY SIGNAL · ANALYSIS COMPLETE</div>
-            <div class="result-title">Would this feel considered?</div>
-            <div class="result-summary">{safe_text(result.get("summary", ""))}</div>
-            <div class="verdict" style="color:{tone};border-color:{tone}38;">
-                <i style="background:{tone};"></i>{safe_text(result.get("verdict", ""))}
+    <div class="results">
+
+        <div class="score-card">
+            <div class="score-left">
+                <div class="tiny-label">HUMAN TOUCH SCORE</div>
+                <div class="score-title">Does it feel human?</div>
+                <div class="score-summary">{safe_text(result.get("summary", ""))}</div>
+                <div class="status" style="color:{tone};border-color:{tone}35;">
+                    <i style="background:{tone};"></i>
+                    {safe_text(result.get("verdict", ""))}
+                </div>
+            </div>
+
+            <div class="score-circle">
+                <svg viewBox="0 0 110 110">
+                    <circle class="circle-bg" cx="55" cy="55" r="48"></circle>
+                    <circle class="circle-value" cx="55" cy="55" r="48"
+                            stroke="{tone}"
+                            stroke-dasharray="{dash:.1f} {circumference:.1f}"></circle>
+                </svg>
+                <div class="circle-center">
+                    <strong>{overall}</strong>
+                    <span>/100</span>
+                </div>
             </div>
         </div>
 
-        <div class="score-ring">
-            <svg viewBox="0 0 120 120">
-                <circle class="ring-track" cx="60" cy="60" r="52"></circle>
-                <circle class="ring-progress" cx="60" cy="60" r="52"
-                    stroke="{tone}"
-                    stroke-dasharray="{dash:.1f} {circumference:.1f}"></circle>
-            </svg>
-            <div class="ring-center">
-                <strong>{overall}</strong>
-                <span>HUMAN TOUCH</span>
+        <div class="metrics">{metrics}</div>
+
+        <div class="recipient-card">
+            <div class="recipient-icon">♧</div>
+            <div>
+                <div class="tiny-label">RECIPIENT PERSPECTIVE</div>
+                <div class="recipient-title">Through their eyes</div>
+                <div class="recipient-copy">
+                    {safe_text(result.get("recipient_perspective", ""))}
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="metrics-grid">{metrics}</div>
-
-    <div class="perspective">
-        <div class="quote">“</div>
-        <div>
-            <div class="eyebrow">RECIPIENT PERSPECTIVE</div>
-            <div class="perspective-copy">{safe_text(result.get("recipient_perspective", ""))}</div>
+        <div class="result-section">
+            <div class="section-label">01 · FRICTION</div>
+            <div class="section-title">What could feel less human?</div>
+            <div class="section-sub">Specific signals found in the communication.</div>
+            <div class="stack">{concern_html}</div>
         </div>
-    </div>
 
-    <div class="result-section">
-        <div class="section-marker">01</div>
-        <div class="eyebrow">FRICTION MAP</div>
-        <div class="section-title">What could weaken the human feeling?</div>
-        <div class="section-desc">Specific evidence from the message and supplied context.</div>
-        <div class="stack">{issue_html}</div>
-    </div>
+        <div class="result-section">
+            <div class="section-label">02 · IMPROVE</div>
+            <div class="section-title">Make the connection stronger.</div>
+            <div class="section-sub">Actionable changes based on the evaluation.</div>
+            <div class="stack">{recommendation_html}</div>
+        </div>
 
-    <div class="result-section">
-        <div class="section-marker">02</div>
-        <div class="eyebrow">IMPROVEMENT PLAN</div>
-        <div class="section-title">Small changes. Stronger connection.</div>
-        <div class="section-desc">Practical recommendations grounded in the evaluation.</div>
-        <div class="stack">{recommendation_html}</div>
-    </div>
+        <div class="result-section">
+            <div class="section-label">03 · REWRITE</div>
+            <div class="section-title">A more human version.</div>
+            <div class="section-sub">Meaning and supported facts are preserved.</div>
 
-    <div class="result-section">
-        <div class="section-marker">03</div>
-        <div class="eyebrow">REWRITE LAB</div>
-        <div class="section-title">Keep the meaning. Improve the signal.</div>
-        <div class="section-desc">No unsupported personal details or factual claims are added.</div>
-
-        <div class="rewrite-grid">
-            <div class="copy-box">
-                <div class="copy-label">ORIGINAL</div>
-                <div class="copy-text">{safe_text(original).replace(chr(10), "<br>")}</div>
-            </div>
-            <div class="copy-box improved">
-                <div class="copy-label">RECOMMENDED REWRITE</div>
-                <div class="copy-text">{safe_text(result.get("recommended_rewrite", "")).replace(chr(10), "<br>")}</div>
+            <div class="rewrite">
+                <div class="message-box">
+                    <div class="box-label">ORIGINAL</div>
+                    <div class="message-copy">{safe_text(original).replace(chr(10), "<br>")}</div>
+                </div>
+                <div class="message-box improved">
+                    <div class="box-label">RECOMMENDED</div>
+                    <div class="message-copy">{safe_text(result.get("recommended_rewrite", "")).replace(chr(10), "<br>")}</div>
+                </div>
             </div>
         </div>
     </div>
     """
 
 
-# ---------- Design system ----------
+# ---------- Premium mobile-inspired design ----------
 st.html(r"""
 <style>
 :root {
-    --bg: #080a08;
-    --panel: #0e110f;
-    --panel-soft: rgba(255,255,255,.025);
-    --line: rgba(255,255,255,.085);
-    --text: #f2f4ef;
-    --muted: #858d86;
-    --muted2: #555d57;
-    --lime: #c8f36b;
-    --violet: #a99bff;
+    --bg: #070B17;
+    --bg2: #0A1020;
+    --card: rgba(16, 24, 45, .82);
+    --card2: rgba(13, 20, 38, .94);
+    --line: rgba(148,163,184,.13);
+    --white: #F8FAFC;
+    --soft: #CBD5E1;
+    --muted: #8290A8;
+    --dim: #526078;
+    --purple: #8B5CF6;
+    --blue: #38BDF8;
+    --cyan: #22D3EE;
 }
 
-/* GLOBAL */
+/* Page */
 html, body, [data-testid="stAppViewContainer"] {
     background:
-        radial-gradient(900px 520px at 4% -8%, rgba(200,243,107,.055), transparent 62%),
-        radial-gradient(900px 580px at 103% 4%, rgba(169,155,255,.07), transparent 62%),
-        #080a08 !important;
-    color: var(--text) !important;
+        radial-gradient(700px 500px at 15% -5%, rgba(124,58,237,.18), transparent 60%),
+        radial-gradient(700px 500px at 100% 10%, rgba(14,165,233,.12), transparent 62%),
+        linear-gradient(180deg, #080C1A 0%, #060916 100%) !important;
+    color: var(--white) !important;
 }
 [data-testid="stHeader"] { background: transparent !important; }
 .block-container {
-    max-width: 1280px !important;
-    padding: 22px 32px 85px !important;
+    max-width: 1160px !important;
+    padding: 18px 25px 75px !important;
 }
 
-/* BRAND BAR */
-.brandbar {
+/* Header */
+.nav {
     display:flex;
-    justify-content:space-between;
     align-items:center;
-    padding: 8px 0 17px;
+    justify-content:space-between;
+    padding:8px 0 18px;
     border-bottom:1px solid var(--line);
 }
-.brand-left { display:flex; align-items:center; gap:10px; }
-.brand-symbol {
-    width:29px;height:29px;display:grid;place-items:center;
-    border:1px solid rgba(200,243,107,.30);
-    border-radius:8px;color:var(--lime);font-size:13px;font-weight:850;
+.brand {
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.logo {
+    width:31px;height:31px;display:grid;place-items:center;
+    border-radius:10px;
+    color:#fff;font-size:15px;font-weight:800;
+    background:linear-gradient(135deg,#6D4AFF,#16B9E8);
+    box-shadow:0 7px 24px rgba(99,102,241,.25);
 }
 .brand-name {
-    color:#e9ece6;font-size:11px;font-weight:850;
-    letter-spacing:.10em;text-transform:uppercase;
+    font-size:12px;font-weight:800;letter-spacing:.08em;
+    text-transform:uppercase;color:#F1F5F9;
 }
-.brand-sub { color:#4e564f;font-size:9px;letter-spacing:.07em;margin-left:3px; }
-.system-state {
-    color:#707870;font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+.brand-sub {
+    color:#64748B;font-size:9px;margin-left:3px;
+}
+.live {
     display:flex;align-items:center;gap:7px;
+    color:#71809A;font-size:9px;letter-spacing:.08em;
+    text-transform:uppercase;
 }
-.system-state i {
-    width:6px;height:6px;border-radius:50%;background:var(--lime);
-    box-shadow:0 0 12px rgba(200,243,107,.8);
+.live i {
+    width:6px;height:6px;border-radius:50%;
+    background:#4ADE80;box-shadow:0 0 11px #4ADE80;
 }
 
-/* HERO */
+/* Hero */
 .hero {
-    display:grid;
-    grid-template-columns:minmax(0,1.2fr) minmax(310px,.8fr);
-    gap:70px;
-    align-items:end;
-    padding:82px 0 58px;
+    position:relative;
+    padding:70px 0 48px;
+    overflow:hidden;
 }
-.eyebrow {
-    color:#7b847c;font-size:9px;font-weight:850;
-    letter-spacing:.18em;text-transform:uppercase;
+.hero:after {
+    content:"";
+    position:absolute;
+    width:450px;height:450px;right:-160px;top:-100px;
+    border-radius:50%;
+    background:radial-gradient(circle,rgba(99,102,241,.13),transparent 67%);
+    pointer-events:none;
 }
-.hero h1 {
-    margin:16px 0 0;
-    font-size:clamp(54px,7.5vw,98px);
-    line-height:.88;
-    letter-spacing:-.07em;
+.hero-kicker {
+    color:#A78BFA;font-size:10px;font-weight:800;
+    letter-spacing:.17em;text-transform:uppercase;
+}
+.hero-title {
+    margin-top:14px;
+    max-width:850px;
+    font-size:clamp(48px,7vw,82px);
+    line-height:.94;
     font-weight:850;
+    letter-spacing:-.065em;
 }
-.hero h1 span { color:#737c74; }
-.author { margin-top:20px;color:#687169;font-size:11px;letter-spacing:.035em; }
-.hero-right {
-    max-width:445px;margin-left:auto;color:#89918a;
-    font-size:13px;line-height:1.9;
+.hero-title span {
+    background:linear-gradient(90deg,#A78BFA,#38BDF8);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
 }
-.hero-right strong { color:#c4cbc4;font-weight:650; }
-.hero-rule { margin-top:20px;padding-top:15px;border-top:1px solid var(--line);color:#555d56;font-size:9px; }
+.author {
+    margin-top:18px;color:#73809A;font-size:11px;
+}
+.hero-copy {
+    max-width:680px;margin-top:18px;
+    color:#8794AB;font-size:14px;line-height:1.8;
+}
+.hero-pill {
+    display:inline-flex;align-items:center;gap:7px;
+    margin-top:22px;padding:8px 12px;
+    border:1px solid rgba(129,140,248,.20);
+    border-radius:999px;background:rgba(99,102,241,.07);
+    color:#C4B5FD;font-size:9px;font-weight:700;
+}
+.hero-pill i {
+    width:5px;height:5px;border-radius:50%;
+    background:#22D3EE;box-shadow:0 0 10px #22D3EE;
+}
 
-/* FLOW */
-.flow {
+/* Workflow */
+.workflow {
     display:grid;grid-template-columns:repeat(3,1fr);
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    gap:9px;margin-bottom:32px;
 }
-.flow-item { padding:17px 19px;border-right:1px solid var(--line); }
-.flow-item:last-child { border-right:0; }
-.flow-num { color:#4e5650;font-size:8px;font-weight:850;letter-spacing:.14em; }
-.flow-title { margin-top:7px;color:#cfd4ce;font-size:11px;font-weight:700; }
-.flow-copy { margin-top:4px;color:#606860;font-size:9px;line-height:1.55; }
+.step {
+    padding:15px 16px;border:1px solid var(--line);
+    border-radius:15px;background:rgba(255,255,255,.022);
+}
+.step-number {
+    color:#6366F1;font-size:8px;font-weight:850;letter-spacing:.14em;
+}
+.step-title { margin-top:6px;color:#D8DEE9;font-size:11px;font-weight:700; }
+.step-copy { margin-top:4px;color:#64748B;font-size:9px; }
 
-/* COMPOSE */
-.compose-label {
-    margin-top:45px;margin-bottom:12px;
-    color:#555e57;font-size:9px;font-weight:850;letter-spacing:.18em;
-}
-.workspace {
-    display:grid;grid-template-columns:1.3fr .7fr;gap:11px;
-}
+/* Panels */
 .panel {
-    border:1px solid var(--line);border-radius:18px;
-    background:linear-gradient(145deg,rgba(255,255,255,.032),rgba(255,255,255,.012));
-    padding:24px;
+    border:1px solid var(--line);
+    border-radius:20px;
+    background:linear-gradient(145deg,rgba(17,25,47,.82),rgba(9,14,28,.90));
+    box-shadow:0 25px 70px rgba(0,0,0,.18);
+    padding:23px;
 }
-.panel-kicker { color:var(--lime);font-size:8px;font-weight:850;letter-spacing:.16em; }
-.panel-title { margin-top:7px;color:#e8ebe6;font-size:19px;font-weight:770;letter-spacing:-.025em; }
-.panel-copy { margin-top:5px;color:#6f786f;font-size:10px;line-height:1.6; }
+.panel-head { margin-bottom:17px; }
+.panel-label {
+    color:#818CF8;font-size:9px;font-weight:800;
+    letter-spacing:.15em;text-transform:uppercase;
+}
+.panel-title {
+    margin-top:6px;color:#F1F5F9;
+    font-size:20px;font-weight:750;letter-spacing:-.025em;
+}
+.panel-copy {
+    margin-top:5px;color:#71809A;font-size:10px;line-height:1.6;
+}
 
+/* Streamlit controls */
 [data-baseweb="textarea"] > div,
 [data-baseweb="input"] > div,
 [data-baseweb="select"] > div {
-    background:#090c0a !important;
-    border:1px solid rgba(255,255,255,.08) !important;
-    border-radius:12px !important;
+    background:rgba(5,10,24,.80) !important;
+    border:1px solid rgba(148,163,184,.13) !important;
+    border-radius:13px !important;
 }
 [data-baseweb="textarea"] > div:focus-within,
 [data-baseweb="input"] > div:focus-within,
 [data-baseweb="select"] > div:focus-within {
-    border-color:rgba(200,243,107,.35) !important;
-    box-shadow:0 0 0 3px rgba(200,243,107,.045) !important;
+    border-color:rgba(139,92,246,.50) !important;
+    box-shadow:0 0 0 3px rgba(139,92,246,.08) !important;
 }
-textarea,input { color:#eef1ec !important; }
-textarea::placeholder,input::placeholder { color:#4b534d !important; }
-[data-baseweb="select"] * { color:#eef1ec !important; }
+textarea,input { color:#F8FAFC !important; }
+textarea::placeholder,input::placeholder { color:#536078 !important; }
+[data-baseweb="select"] * { color:#F8FAFC !important; }
 label,[data-testid="stWidgetLabel"] p {
-    color:#858e86 !important;font-size:10px !important;font-weight:700 !important;
+    color:#A7B2C5 !important;
+    font-size:10px !important;
+    font-weight:650 !important;
 }
-[data-testid="stRadio"] label { color:#858e86 !important; }
-[data-testid="stRadio"] [role="radiogroup"] { gap:3px; }
-.char-count { margin:-5px 0 2px;color:#505850;font-size:9px; }
-.char-count b { color:#a9b09e; }
+[data-testid="stRadio"] label { color:#9AA7BC !important; }
+[data-testid="stRadio"] [role="radiogroup"] { gap:4px; }
 
-/* CTA */
 .stButton > button {
-    min-height:58px !important;
-    border-radius:12px !important;
-    border:1px solid rgba(200,243,107,.28) !important;
-    background:var(--lime) !important;
-    color:#10140b !important;
-    font-size:12px !important;font-weight:850 !important;
-    box-shadow:0 15px 40px rgba(170,210,70,.10) !important;
+    min-height:59px !important;
+    border-radius:14px !important;
+    border:1px solid rgba(167,139,250,.25) !important;
+    background:linear-gradient(100deg,#7C3AED,#8B5CF6 48%,#0891B2) !important;
+    color:white !important;
+    font-size:14px !important;
+    font-weight:800 !important;
+    box-shadow:0 17px 45px rgba(99,102,241,.22) !important;
+    transition:.18s ease;
 }
 .stButton > button:hover {
-    filter:brightness(1.04);transform:translateY(-1px);
-    box-shadow:0 18px 48px rgba(170,210,70,.16) !important;
+    filter:brightness(1.07);transform:translateY(-1px);
+    box-shadow:0 22px 55px rgba(99,102,241,.30) !important;
 }
-.disclaimer {
-    text-align:center;margin-top:8px;color:#4e564f;font-size:9px;
+.counter {
+    color:#526078;font-size:9px;margin:-5px 0 2px;
 }
+.counter b { color:#A78BFA; }
 
-/* RESULTS */
-.report-top {
-    margin-top:58px;padding-top:25px;border-top:1px solid var(--line);
-    text-align:center;
+/* Results */
+.results { margin-top:24px; }
+.result-divider {
+    height:1px;background:var(--line);margin:46px 0 28px;
 }
-.report-title-main {
-    margin-top:7px;color:#eef1eb;font-size:31px;font-weight:820;
-    letter-spacing:-.045em;
+.results-title {
+    text-align:center;color:#F1F5F9;font-size:30px;
+    font-weight:820;letter-spacing:-.045em;
 }
-.result-hero {
-    display:grid;grid-template-columns:1fr 190px;gap:35px;align-items:center;
-    margin-top:30px;padding:31px;border:1px solid var(--line);border-radius:21px;
+.score-card {
+    display:grid;grid-template-columns:1fr 180px;
+    gap:25px;align-items:center;
+    margin-top:25px;padding:29px;
+    border:1px solid rgba(129,140,248,.18);
+    border-radius:21px;
     background:
-        radial-gradient(circle at 85% 50%,rgba(200,243,107,.055),transparent 31%),
-        linear-gradient(145deg,rgba(255,255,255,.033),rgba(255,255,255,.012));
+        radial-gradient(circle at 85% 50%,rgba(99,102,241,.12),transparent 35%),
+        linear-gradient(145deg,rgba(17,25,47,.88),rgba(9,14,28,.93));
 }
-.result-title {
-    margin-top:9px;color:#edf0eb;font-size:clamp(27px,4vw,40px);
-    font-weight:820;letter-spacing:-.045em;line-height:1.04;
+.tiny-label {
+    color:#7C89A3;font-size:8px;font-weight:800;
+    letter-spacing:.15em;
 }
-.result-summary { max-width:680px;margin-top:13px;color:#7f887f;font-size:12px;line-height:1.75; }
-.verdict {
-    display:inline-flex;align-items:center;gap:7px;margin-top:17px;
-    padding:7px 10px;border:1px solid;border-radius:999px;
-    background:rgba(255,255,255,.018);font-size:9px;font-weight:750;
+.score-title {
+    margin-top:8px;color:#F8FAFC;font-size:35px;
+    line-height:1.05;font-weight:820;letter-spacing:-.045em;
 }
-.verdict i { width:5px;height:5px;border-radius:50%;box-shadow:0 0 9px currentColor; }
+.score-summary {
+    max-width:650px;margin-top:12px;color:#8390A6;
+    font-size:11px;line-height:1.75;
+}
+.status {
+    display:inline-flex;align-items:center;gap:7px;
+    margin-top:16px;padding:7px 10px;border:1px solid;
+    border-radius:999px;background:rgba(255,255,255,.025);
+    font-size:9px;font-weight:750;
+}
+.status i { width:5px;height:5px;border-radius:50%;box-shadow:0 0 9px currentColor; }
 
-.score-ring { width:170px;height:170px;position:relative;margin:auto; }
-.score-ring svg { width:170px;height:170px;transform:rotate(-90deg); }
-.ring-track { fill:none;stroke:rgba(255,255,255,.065);stroke-width:5; }
-.ring-progress { fill:none;stroke-width:5;stroke-linecap:round; }
-.ring-center {
+.score-circle { width:160px;height:160px;position:relative;margin:auto; }
+.score-circle svg { width:160px;height:160px;transform:rotate(-90deg); }
+.circle-bg { fill:none;stroke:rgba(255,255,255,.07);stroke-width:6; }
+.circle-value { fill:none;stroke-width:6;stroke-linecap:round; }
+.circle-center {
     position:absolute;inset:0;display:flex;flex-direction:column;
     align-items:center;justify-content:center;
 }
-.ring-center strong { color:#f2f4ef;font-size:42px;line-height:1;font-weight:850;letter-spacing:-.06em; }
-.ring-center span { margin-top:7px;color:#4f5851;font-size:7px;font-weight:850;letter-spacing:.14em; }
-
-.metrics-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:9px; }
-.metric-card {
-    padding:17px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.018);
+.circle-center strong {
+    color:#F8FAFC;font-size:42px;font-weight:850;
+    letter-spacing:-.07em;line-height:1;
 }
-.metric-code { color:#464e48;font-size:8px;font-weight:850;letter-spacing:.12em; }
-.metric-name { margin-top:10px;color:#858e86;font-size:10px;font-weight:650; }
-.metric-value { margin-top:7px;font-size:27px;font-weight:830;letter-spacing:-.05em; }
-.metric-value span { color:#4b534d;font-size:8px;font-weight:600; }
-.metric-track { height:3px;margin-top:12px;border-radius:99px;background:rgba(255,255,255,.05);overflow:hidden; }
-.metric-track i { display:block;height:100%;border-radius:inherit; }
+.circle-center span { color:#68758D;font-size:9px;margin-top:5px; }
 
-.perspective {
-    display:grid;grid-template-columns:53px 1fr;gap:14px;margin-top:9px;
-    padding:25px 28px;border:1px solid rgba(169,155,255,.12);
-    border-radius:16px;background:linear-gradient(120deg,rgba(169,155,255,.045),rgba(255,255,255,.012));
+/* Metrics */
+.metrics {
+    display:grid;grid-template-columns:repeat(5,1fr);
+    gap:8px;margin-top:9px;
 }
-.quote { color:#8e84df;font:65px/0.6 Georgia,serif; }
-.perspective-copy { max-width:920px;margin-top:9px;color:#b2bab2;font-size:13px;line-height:1.8; }
+.metric {
+    padding:17px;border:1px solid var(--line);
+    border-radius:15px;background:rgba(255,255,255,.022);
+}
+.metric-icon { color:#A78BFA;font-size:12px; }
+.metric-label { margin-top:8px;color:#8996AA;font-size:9px;font-weight:650; }
+.metric-score { margin-top:6px;color:#F1F5F9;font-size:25px;font-weight:800; }
+.metric-bar { height:3px;margin-top:11px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden; }
+.metric-bar span { display:block;height:100%;border-radius:inherit; }
 
+/* Recipient */
+.recipient-card {
+    display:grid;grid-template-columns:40px 1fr;gap:13px;
+    margin-top:9px;padding:23px 25px;
+    border:1px solid rgba(167,139,250,.15);
+    border-radius:16px;
+    background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(14,165,233,.035));
+}
+.recipient-icon {
+    width:36px;height:36px;display:grid;place-items:center;
+    border-radius:11px;background:rgba(167,139,250,.10);
+    color:#A78BFA;font-size:17px;
+}
+.recipient-title { margin-top:5px;color:#EEF2FF;font-size:15px;font-weight:730; }
+.recipient-copy { max-width:900px;margin-top:8px;color:#9AA7BC;font-size:11px;line-height:1.75; }
+
+/* Report sections */
 .result-section { margin-top:43px; }
-.result-section + .result-section { margin-top:48px; }
-.section-marker { color:#454d47;font-size:9px;font-weight:850;margin-bottom:8px; }
-.section-title { margin-top:6px;color:#e4e8e2;font-size:22px;font-weight:780;letter-spacing:-.035em; }
-.section-desc { margin-top:4px;color:#626a63;font-size:9px; }
-.stack { margin-top:16px; }
+.section-label { color:#818CF8;font-size:8px;font-weight:850;letter-spacing:.16em; }
+.section-title { margin-top:6px;color:#EDF2F7;font-size:22px;font-weight:780;letter-spacing:-.03em; }
+.section-sub { margin-top:4px;color:#68758B;font-size:9px; }
+.stack { margin-top:15px; }
 
-.issue-card,.recommend-card {
-    display:grid;grid-template-columns:42px 1fr auto;gap:14px;
-    padding:18px 19px;margin:7px 0;border:1px solid var(--line);
-    border-radius:14px;background:rgba(255,255,255,.017);
+.list-card,.recommendation {
+    display:grid;grid-template-columns:40px 1fr auto;gap:13px;
+    padding:17px 18px;margin:7px 0;
+    border:1px solid var(--line);border-radius:14px;
+    background:rgba(255,255,255,.018);
 }
-.issue-card { grid-template-columns:42px 1fr; }
-.index { color:#4b534d;font-size:9px;font-weight:850;letter-spacing:.12em; }
-.issue-head { display:flex;justify-content:space-between;gap:15px; }
-.issue-title,.recommend-title { color:#dce1db;font-size:12px;font-weight:750; }
-.issue-dim { margin-top:4px;color:#626b63;font-size:8px; }
-.issue-detail {
-    margin-top:11px;color:#737c74;font-size:10px;line-height:1.65;
-}
-.issue-detail b {
-    display:block;margin-bottom:2px;color:#9ba39c;font-size:8px;
-    letter-spacing:.08em;text-transform:uppercase;
-}
+.list-number { color:#56647B;font-size:9px;font-weight:850;letter-spacing:.10em; }
+.issue-head { display:flex;justify-content:space-between;gap:12px; }
+.list-title { color:#E2E8F0;font-size:11px;font-weight:730; }
+.list-meta { margin-top:3px;color:#64748B;font-size:8px; }
+.list-copy { margin-top:10px;color:#748198;font-size:9px;line-height:1.65; }
+.list-copy b { color:#A3AEC0; }
 .severity {
     align-self:start;padding:4px 7px;border-radius:999px;
-    font-size:7px;font-weight:850;text-transform:uppercase;
+    font-size:7px;font-weight:800;text-transform:uppercase;
 }
-.severity.low { color:#68d8ac;background:rgba(69,211,166,.06); }
-.severity.medium { color:#e8c46a;background:rgba(242,198,109,.06); }
-.severity.high { color:#f18494;background:rgba(242,127,145,.06); }
-.recommend-copy { margin-top:6px;color:#727b73;font-size:10px;line-height:1.65; }
-.recommend-arrow { color:#68716a;font-size:15px; }
-.empty-state {
-    display:flex;align-items:center;gap:10px;padding:17px;
-    border:1px dashed rgba(255,255,255,.09);border-radius:13px;
-    color:#69726b;font-size:10px;line-height:1.6;
-}
-.empty-state span { color:var(--lime);font-size:16px; }
-.empty-state b { color:#aab1ab; }
+.severity.low { color:#4ADE80;background:rgba(74,222,128,.07); }
+.severity.medium { color:#FBBF24;background:rgba(251,191,36,.07); }
+.severity.high { color:#FB7185;background:rgba(251,113,133,.07); }
+.recommendation { align-items:start; }
+.recommend-copy { margin-top:6px;color:#748198;font-size:9px;line-height:1.65; }
+.arrow { color:#71809A;font-size:14px; }
 
-.rewrite-grid { display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:17px; }
-.copy-box {
-    min-height:225px;padding:20px;border:1px solid var(--line);
-    border-radius:15px;background:#0b0e0c;
+/* Rewrite */
+.rewrite {
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:9px;margin-top:15px;
 }
-.copy-box.improved {
-    border-color:rgba(200,243,107,.13);
-    background:radial-gradient(circle at 100% 0%,rgba(200,243,107,.045),transparent 48%),#0b0e0c;
+.message-box {
+    min-height:220px;padding:19px;
+    border:1px solid var(--line);border-radius:15px;
+    background:rgba(5,10,20,.72);
 }
-.copy-label { color:#59615a;font-size:8px;font-weight:850;letter-spacing:.15em; }
-.copy-text { margin-top:12px;color:#aeb6af;font-size:11px;line-height:1.8; }
+.message-box.improved {
+    border-color:rgba(74,222,128,.15);
+    background:radial-gradient(circle at 100% 0%,rgba(74,222,128,.05),transparent 45%),rgba(5,10,20,.72);
+}
+.box-label { color:#65728A;font-size:8px;font-weight:850;letter-spacing:.15em; }
+.message-copy { margin-top:11px;color:#B4BFCE;font-size:10px;line-height:1.8; }
+
+/* Empty / footer */
+.empty {
+    display:flex;gap:10px;align-items:center;
+    padding:17px;border:1px dashed rgba(255,255,255,.10);
+    border-radius:13px;color:#6F7C91;font-size:9px;line-height:1.6;
+}
+.empty span { color:#4ADE80;font-size:15px; }
+.empty b { color:#AEB8C8; }
 
 .footer {
-    margin-top:62px;padding-top:19px;border-top:1px solid var(--line);
+    margin-top:58px;padding-top:18px;border-top:1px solid var(--line);
     display:flex;justify-content:space-between;gap:20px;
-    color:#4b534d;font-size:8px;letter-spacing:.04em;line-height:1.6;
+    color:#4F5C71;font-size:8px;line-height:1.6;
 }
 
-@media (max-width: 950px) {
-    .hero,.workspace { grid-template-columns:1fr; }
-    .hero-right { margin-left:0;max-width:650px; }
-    .metrics-grid { grid-template-columns:repeat(2,1fr); }
-    .result-hero { grid-template-columns:1fr; }
-    .score-ring { order:-1; }
+@media(max-width:900px) {
+    .hero { padding-top:55px; }
+    .workspace { grid-template-columns:1fr !important; }
+    .metrics { grid-template-columns:repeat(2,1fr); }
+    .score-card { grid-template-columns:1fr; }
+    .score-circle { order:-1; }
 }
-@media (max-width: 650px) {
-    .block-container { padding:15px 13px 55px !important; }
-    .hero { padding:52px 0 40px;gap:30px; }
-    .hero h1 { font-size:55px; }
-    .flow { grid-template-columns:1fr; }
-    .flow-item { border-right:0;border-bottom:1px solid var(--line); }
-    .flow-item:last-child { border-bottom:0; }
-    .metrics-grid { grid-template-columns:1fr; }
-    .rewrite-grid { grid-template-columns:1fr; }
-    .panel,.result-hero { padding:20px; }
+@media(max-width:650px) {
+    .block-container { padding:12px 12px 55px !important; }
+    .hero-title { font-size:51px; }
+    .workflow { grid-template-columns:1fr; }
+    .metrics { grid-template-columns:1fr; }
+    .rewrite { grid-template-columns:1fr; }
+    .score-card,.panel { padding:20px; }
     .footer { flex-direction:column; }
 }
 </style>
@@ -779,74 +857,63 @@ label,[data-testid="stWidgetLabel"] p {
 
 # ---------- Header ----------
 st.html("""
-<div class="brandbar">
-    <div class="brand-left">
-        <div class="brand-symbol">✦</div>
+<div class="nav">
+    <div class="brand">
+        <div class="logo">✦</div>
         <div class="brand-name">Human Touch</div>
-        <div class="brand-sub">/ Quality Layer</div>
+        <div class="brand-sub">Quality Layer</div>
     </div>
-    <div class="system-state"><i></i> Intelligence layer active</div>
+    <div class="live"><i></i> AI communication intelligence</div>
 </div>
 """)
 
 # ---------- Hero ----------
 st.html("""
 <div class="hero">
-    <div>
-        <div class="eyebrow">Communication quality intelligence</div>
-        <h1>Make every message<br><span>feel considered.</span></h1>
-        <div class="author">By Engr. Muhammad Mubashir Asim</div>
+    <div class="hero-kicker">AI CAN WRITE. HUMAN TOUCH DECIDES.</div>
+    <div class="hero-title">
+        But does it<br><span>feel human?</span>
     </div>
-    <div class="hero-right">
-        AI can produce fluent language instantly. <strong>Human Touch</strong>
-        evaluates what happens after the words are generated: whether another
-        person would feel understood, respected, and thoughtfully addressed.
-        <div class="hero-rule">
-            Recipient experience · Context awareness · Human-touch quality
-        </div>
+    <div class="author">By Engr. Muhammad Mubashir Asim</div>
+    <div class="hero-copy">
+        Evaluate messages for empathy, naturalness, personalization,
+        context-awareness, and brand voice — before they reach another person.
     </div>
+    <div class="hero-pill"><i></i> Human intelligence layer active</div>
 </div>
 """)
 
-# ---------- Flow ----------
+# ---------- Workflow ----------
 st.html("""
-<div class="flow">
-    <div class="flow-item">
-        <div class="flow-num">01 · MESSAGE</div>
-        <div class="flow-title">Bring the communication</div>
-        <div class="flow-copy">Paste the exact message you intend to send.</div>
+<div class="workflow">
+    <div class="step">
+        <div class="step-number">01 · MESSAGE</div>
+        <div class="step-title">Write or paste</div>
+        <div class="step-copy">Start with the communication.</div>
     </div>
-    <div class="flow-item">
-        <div class="flow-num">02 · CONTEXT</div>
-        <div class="flow-title">Describe the situation</div>
-        <div class="flow-copy">Recipient, purpose, brand voice, and useful context.</div>
+    <div class="step">
+        <div class="step-number">02 · CONTEXT</div>
+        <div class="step-title">Add recipient context</div>
+        <div class="step-copy">Give the situation meaning.</div>
     </div>
-    <div class="flow-item">
-        <div class="flow-num">03 · QUALITY SIGNAL</div>
-        <div class="flow-title">See it through their eyes</div>
-        <div class="flow-copy">Score, friction, recommendations, and rewrite.</div>
+    <div class="step">
+        <div class="step-number">03 · ANALYZE</div>
+        <div class="step-title">Get human-touch insights</div>
+        <div class="step-copy">Score, improve, and rewrite.</div>
     </div>
 </div>
 """)
 
-# ---------- Compose ----------
+# ---------- Input ----------
 st.html("""
-<div class="compose-label">COMPOSE / EVALUATE</div>
-<div class="workspace">
-    <div class="panel">
-        <div class="panel-kicker">MESSAGE</div>
-        <div class="panel-title">What are you about to send?</div>
-        <div class="panel-copy">Use the message exactly as the recipient would receive it.</div>
+<div class="panel">
+    <div class="panel-head">
+        <div class="panel-label">MESSAGE</div>
+        <div class="panel-title">Your message</div>
+        <div class="panel-copy">Paste the communication exactly as the recipient would see it.</div>
     </div>
-    <div class="panel">
-        <div class="panel-kicker">CONTEXT</div>
-        <div class="panel-title">Who is on the other side?</div>
-        <div class="panel-copy">Context gives the quality layer something human to reason about.</div>
-    </div>
-</div>
 """)
 
-# Inputs live immediately under their visual panels.
 content_type = st.radio(
     "Communication type",
     ["Email", "Customer Service", "Business", "Social Post", "Other"],
@@ -856,37 +923,48 @@ content_type = st.radio(
 
 message = st.text_area(
     "Message",
-    placeholder="Start with the message you want a second pair of human eyes on…",
-    height=270,
+    placeholder="Type or paste your message here…",
+    height=250,
     label_visibility="collapsed",
 )
 
 st.html(
-    f'<div class="char-count"><b>{len(message or "")}</b> characters · '
-    'evaluated for communication quality only</div>'
+    f'<div class="counter"><b>{len(message or "")}</b> characters · '
+    'communication quality analysis only</div>'
 )
+
+st.html("</div>")
+
+st.write("")
+st.html("""
+<div class="panel">
+    <div class="panel-label">CONTEXT</div>
+    <div class="panel-title">Who is on the other side?</div>
+    <div class="panel-copy">A little context helps the model judge whether the message fits the situation.</div>
+</div>
+""")
 
 left, right = st.columns(2, gap="medium")
 with left:
     audience = st.text_input("Audience / Recipient", placeholder="Existing customer")
-    purpose = st.text_input("Purpose", placeholder="Apologize for a delayed delivery")
+    purpose = st.text_input("Purpose", placeholder="Confirmation")
 with right:
-    brand_voice = st.text_input("Brand Voice", placeholder="Warm, professional, concise")
+    brand_voice = st.text_input("Brand Voice", placeholder="Warm, professional")
     additional_context = st.text_input(
         "Additional Context",
-        placeholder="The customer has already waited 10 days.",
+        placeholder="Relevant situation or prior interaction…",
     )
 
 st.write("")
-analyze = st.button("✦  Analyze Human Touch", type="primary", use_container_width=True)
+analyze = st.button("✦  Analyze Human Touch  →", type="primary", use_container_width=True)
 
 st.html("""
-<div class="disclaimer">
-    Quality analysis from the recipient's perspective · not a definitive AI detector
+<div style="text-align:center;margin-top:8px;color:#56647B;font-size:8px;">
+    Your message is evaluated for communication quality — not treated as a definitive AI detector.
 </div>
 """)
 
-# ---------- Evaluation ----------
+# ---------- Analyze ----------
 if analyze:
     if not message.strip():
         st.error("Please paste a message before analyzing.")
@@ -929,17 +1007,15 @@ if "analyzed_message" not in st.session_state:
 
 if st.session_state.result:
     st.html("""
-    <div class="report-top">
-        <div class="eyebrow">ANALYSIS COMPLETE</div>
-        <div class="report-title-main">Your communication quality report</div>
-    </div>
+    <div class="result-divider"></div>
+    <div class="results-title">Analysis Results</div>
     """)
-    st.html(results_html(st.session_state.result, st.session_state.analyzed_message))
+    st.html(results_view(st.session_state.result, st.session_state.analyzed_message))
 
 # ---------- Footer ----------
 st.html("""
 <div class="footer">
-    <div>HUMAN TOUCH QUALITY LAYER · COMMUNICATION QUALITY INTELLIGENCE</div>
-    <div>Does not determine whether content was written by a human or AI.</div>
+    <div>HUMAN TOUCH · QUALITY LAYER</div>
+    <div>Communication quality, recipient perspective, human connection.</div>
 </div>
 """)
