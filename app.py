@@ -86,6 +86,14 @@ html, body, [data-testid="stAppViewContainer"] {
     margin-top: 5px;
 }
 
+.hero-author {
+    font-size: 14px;
+    color: #8f9bb3;
+    font-weight: 500;
+    margin-top: 9px;
+    letter-spacing: .02em;
+}
+
 .hero-tagline {
     font-size: 24px;
     font-weight: 600;
@@ -842,6 +850,10 @@ render_markdown(
 
         <div class="hero-product">
             Quality Layer
+        </div>
+
+        <div class="hero-author">
+            Engr. Muhammad Mubashir Asim
         </div>
 
         <div class="hero-tagline">
