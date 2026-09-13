@@ -853,7 +853,7 @@ render_markdown(
         </div>
 
         <div class="hero-author">
-            Engr. Muhammad Mubashir Asim
+            By Engr. Muhammad Mubashir Asim
         </div>
 
         <div class="hero-tagline">
