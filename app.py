@@ -22,12 +22,12 @@ st.set_page_config(
 # Streamlit treats heavily-indented HTML passed to render_markdown() as a
 # code block. Dedent HTML before rendering so the premium UI displays
 # as intended instead of showing raw <div> tags.
-_st_markdown = st.markdown
-
 def render_markdown(content, **kwargs):
+    """Render the app's HTML directly so Streamlit never shows raw HTML tags."""
     if isinstance(content, str):
         content = textwrap.dedent(content)
-    return _st_markdown(content, **kwargs)
+    kwargs.pop("unsafe_allow_html", None)
+    return st.html(content)
 
 
 # ============================================================
