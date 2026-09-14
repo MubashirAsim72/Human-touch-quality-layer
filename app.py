@@ -599,7 +599,7 @@ else:
       <div class="empty">
         <div style="font-size:20px;color:#9a91ff;margin-bottom:7px;">✦</div>
         <div style="color:#c2c7d1;font-weight:700;">Your quality review will appear here</div>
-        <div style="margin-top:5px;">One message in. Clear human-touch signals out.</div>
+        <div style="margin-top:5px;">One message in Clear human-touch signals out.</div>
       </div>
     </div>
     ''')
